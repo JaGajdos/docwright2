@@ -1,0 +1,29 @@
+{
+  "name": "docwright",
+  "version": "0.1.0",
+  "description": "DocWiright - generates a README and one-screen architecture map for any public GitHub repo.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "docwright": "./bin/docwright.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "generate": "node --import tsx src/cli/generate.ts"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "openai": "^4.68.0",
+    "zod": "^3.23.8",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "@types/node": "^22.7.4",
+    "tsx": "^4.19.1"
+  }
+}
