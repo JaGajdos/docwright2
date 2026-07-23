@@ -40,12 +40,34 @@ npm test
 
 Testy, ktoré potrebujú `GITHUB_PERSONAL_ACCESS_TOKEN`, sa bez neho čestne preskočia (skip), nie fingujú úspech.
 
-## Poznámka k inštalácii v CI/produkcii
+## vendor/github-mcp-server binárka (nutná, nie je v git repe)
 
-Vyžaduje `vendor/github-mcp-server` binárku (Linux x86_64, stiahnutá z [github/github-mcp-server releases](https://github.com/github/github-mcp-server/releases), aktuálne v1.6.0) - nie je v git repe (binárka), stiahni pred prvým spustením:
+Stiahni verziu podľa svojho OS z [github/github-mcp-server releases](https://github.com/github/github-mcp-server/releases) (aktuálne v1.6.0) do priečinka `vendor/`.
 
+**Windows (PowerShell):**
+```powershell
+mkdir vendor -Force
+Invoke-WebRequest -Uri "https://github.com/github/github-mcp-server/releases/download/v1.6.0/github-mcp-server_Windows_x86_64.zip" -OutFile "$env:TEMP\gms.zip"
+Expand-Archive -Path "$env:TEMP\gms.zip" -DestinationPath vendor -Force
+```
+
+**macOS (Apple Silicon):**
+```bash
+curl -sL -o /tmp/gms.tar.gz https://github.com/github/github-mcp-server/releases/download/v1.6.0/github-mcp-server_Darwin_arm64.tar.gz
+mkdir -p vendor && tar -xzf /tmp/gms.tar.gz -C vendor github-mcp-server
+chmod +x vendor/github-mcp-server
+```
+
+**Linux (x86_64) / WSL:**
 ```bash
 curl -sL -o /tmp/gms.tar.gz https://github.com/github/github-mcp-server/releases/download/v1.6.0/github-mcp-server_Linux_x86_64.tar.gz
 mkdir -p vendor && tar -xzf /tmp/gms.tar.gz -C vendor github-mcp-server
 chmod +x vendor/github-mcp-server
 ```
+
+Výsledok: `vendor/github-mcp-server` (Linux/Mac) alebo `vendor/github-mcp-server.exe` (Windows). Kód (`src/ingestion/githubMcpClient.ts`) si príponu podľa OS vyberie sám.
+
+## Ako získať kľúče do .env
+
+- `OPENAI_API_KEY` — [platform.openai.com/api-keys](https://platform.openai.com/api-keys), vytvor nový secret key.
+- `GITHUB_PERSONAL_ACCESS_TOKEN` — [github.com/settings/tokens](https://github.com/settings/tokens) → "Generate new token (classic)" → stačí bez zaškrtnutých scopes (len verejné repo čítanie) alebo scope `public_repo`. Bez tokenu server pri prvom volaní vypíše OAuth device-flow výzvu namiesto výsledku.

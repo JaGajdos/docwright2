@@ -8,11 +8,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // research.md sekcia 1: github-mcp-server beží ako subprocess (stdio), read-only,
 // s explicitným zoznamom nástrojov. Perzistentné pripojenie na worker (nie per job) -
 // v CLI kontexte je to jeden proces na jedno spustenie `docwright generate`.
-const VENDOR_BINARY = path.resolve(__dirname, "../../vendor/github-mcp-server");
+const VENDOR_BINARY = path.resolve(
+  __dirname,
+  "../../vendor/github-mcp-server" + (process.platform === "win32" ? ".exe" : ""),
+);
 const ALLOWED_TOOLS = ["get_repository_tree", "get_file_contents", "search_code"] as const;
 
 export interface GithubMcpClientOptions {
-  /** Service-level PAT (research.md #1). Voliteľné - bez neho beží unauthenticated (60 req/h). */
+  /**
+   * Service-level PAT (research.md #1). POVINNÝ pre reálnu prevádzku - bez neho
+   * github-mcp-server pri prvom tool-calle vyžaduje OAuth device-flow (opravené
+   * po reálnom teste 23.7.2026, pôvodne sme si mysleli, že stačí nižší rate limit).
+   */
   githubToken?: string;
   logFile?: string;
 }
