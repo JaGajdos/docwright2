@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { runGeneration } from "./core/runGeneration.js";
 import { loadAzureConfigFromEnv, GenerationError } from "./generation/openaiClient.js";
 import { GithubMcpClientError } from "./ingestion/githubMcpClient.js";
+import { isSupportedOutputLanguage } from "./generation/promptBuilder.js";
 import type { TemplateType } from "./templates/types.js";
 
 // T-web-02: minimálny verejný HTTP wrapper nad src/core/runGeneration.ts (Article II -
@@ -133,7 +134,7 @@ const server = createServer(async (req, res) => {
     }
 
     try {
-      const body = (await readJsonBody(req)) as { repo?: string; template?: string };
+      const body = (await readJsonBody(req)) as { repo?: string; template?: string; language?: string };
       if (!body.repo || typeof body.repo !== "string") {
         sendJson(res, 400, { error_code: "bad_request", message: "Telo požiadavky musí obsahovať pole 'repo' (napr. owner/repo alebo GitHub URL)." });
         return;
@@ -144,10 +145,13 @@ const server = createServer(async (req, res) => {
         ? (body.template as TemplateType)
         : undefined;
 
+      const outputLanguage = isSupportedOutputLanguage(body.language) ? body.language : undefined;
+
       const outcome = await runGeneration(body.repo, {
         githubToken: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
         azureConfig,
         templateOverride,
+        outputLanguage,
       });
 
       sendJson(res, 200, {

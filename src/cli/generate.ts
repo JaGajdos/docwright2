@@ -4,6 +4,7 @@ import { writeFile } from "node:fs/promises";
 import { GithubMcpClientError } from "../ingestion/githubMcpClient.js";
 import { loadAzureConfigFromEnv, GenerationError } from "../generation/openaiClient.js";
 import { runGeneration } from "../core/runGeneration.js";
+import { isSupportedOutputLanguage, SUPPORTED_OUTPUT_LANGUAGES, type OutputLanguage } from "../generation/promptBuilder.js";
 import type { TemplateType } from "../templates/types.js";
 
 // T025 (tasks.md) - `docwright generate <url>` prepája ingestion -> config -> template -> generation.
@@ -19,7 +20,8 @@ async function main() {
     .option("--json", "Vypíše výsledok ako JSON namiesto Markdown", false)
     .option("-o, --output <file>", "Zapíše README do súboru namiesto stdout")
     .option("--template <type>", "Vynúti šablónu (library|cli|app|api), inak auto-detekcia + .docwright.json")
-    .action(async (repoUrlArg: string, opts: { json: boolean; output?: string; template?: string }) => {
+    .option("--language <code>", `Jazyk výstupu (${SUPPORTED_OUTPUT_LANGUAGES.join("|")}), default sk`)
+    .action(async (repoUrlArg: string, opts: { json: boolean; output?: string; template?: string; language?: string }) => {
       // Celé telo je v try/catch - Article III/V: každé zlyhanie musí byť čitateľné,
       // nikdy tiché ukončenie s exit 0 (bug nájdený a opravený pri smoke teste 23.7.2026).
       try {
@@ -30,11 +32,16 @@ async function main() {
           );
         }
 
+        if (opts.language && !isSupportedOutputLanguage(opts.language)) {
+          throw new Error(`Nepodporovaný jazyk "${opts.language}". Podporované: ${SUPPORTED_OUTPUT_LANGUAGES.join(", ")}.`);
+        }
+
         console.error(`Ingestujem ${repoUrlArg}...`);
         const outcome = await runGeneration(repoUrlArg, {
           githubToken: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
           azureConfig,
           templateOverride: opts.template as TemplateType | undefined,
+          outputLanguage: opts.language as OutputLanguage | undefined,
         });
 
         if (outcome.configParseWarning) {

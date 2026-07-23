@@ -1,7 +1,13 @@
 import { AzureOpenAI } from "openai";
 import type { Template } from "../templates/types.js";
 import { GenerationResultSchema, GENERATION_RESULT_JSON_SCHEMA, type GenerationResultShape } from "./schema.js";
-import { buildGenerationPrompt, buildMermaidFixPrompt, type GenerationContext } from "./promptBuilder.js";
+import {
+  buildGenerationPrompt,
+  buildMermaidFixPrompt,
+  DEFAULT_OUTPUT_LANGUAGE,
+  type GenerationContext,
+  type OutputLanguage,
+} from "./promptBuilder.js";
 import { validateMermaidDiagram } from "./mermaidValidate.js";
 
 // research.md sekcia 2 (revidované 23.7.2026 - Azure OpenAI, nie priame OpenAI API):
@@ -52,6 +58,7 @@ export async function generateDocumentation(
   azureConfig: AzureOpenAiConfig,
   context: GenerationContext,
   template: Template,
+  outputLanguage: OutputLanguage = DEFAULT_OUTPUT_LANGUAGE,
 ): Promise<GenerationOutcome> {
   const client = new AzureOpenAI({
     apiKey: azureConfig.apiKey,
@@ -59,7 +66,7 @@ export async function generateDocumentation(
     apiVersion: azureConfig.apiVersion,
     deployment: azureConfig.deployment,
   });
-  const { system, user } = buildGenerationPrompt(context, template);
+  const { system, user } = buildGenerationPrompt(context, template, outputLanguage);
 
   // GPT-5.6 (reasoning model) občas vráti štruktúrovane platný JSON, ale s prázdnym
   // readme_markdown/summary (pozorované naživo pri opakovaných volaniach s identickým

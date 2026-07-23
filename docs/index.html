@@ -3,101 +3,228 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DocWiright — README + architecture diagram generátor</title>
+<title>DocWright — README + architecture diagram generátor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.0/mermaid.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f1117;
-    --panel: #171a23;
-    --border: #2a2e3a;
-    --text: #e6e8ee;
-    --muted: #9aa0ac;
-    --accent: #6ea8fe;
-    --error: #ff6b6b;
+    --bg: #05070d;
+    --bg-grid: #0b0f1a;
+    --panel: #0d1220;
+    --panel-2: #11172a;
+    --border: #22293f;
+    --border-bright: #3a4568;
+    --text: #e7ebf5;
+    --muted: #8891a8;
+    --accent: #4fd6ff;
+    --accent-2: #7c8dff;
+    --accent-glow: rgba(79, 214, 255, 0.35);
+    --success: #3ddc97;
+    --error: #ff6b81;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
+    font-family: var(--sans);
     color: var(--text);
+    background:
+      radial-gradient(circle at 15% 0%, rgba(79, 214, 255, 0.08), transparent 45%),
+      radial-gradient(circle at 85% 20%, rgba(124, 141, 255, 0.08), transparent 40%),
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px),
+      var(--bg);
+    background-size: auto, auto, 40px 40px, 40px 40px, auto;
+    min-height: 100%;
   }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 20px 80px; }
-  h1 { font-size: 1.6rem; margin-bottom: 4px; }
-  p.sub { color: var(--muted); margin-top: 0; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 48px 20px 90px; }
+
+  header.hero { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+  .glyph {
+    width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-weight: 700; color: #05070d; font-size: 1.1rem;
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+  h1 {
+    font-size: 1.9rem; margin: 0; letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  h1 .accent { color: var(--accent); }
+  p.sub {
+    color: var(--muted); margin: 6px 0 0 54px; font-size: 0.95rem;
+    font-family: var(--mono);
+  }
+
   form {
-    display: flex; gap: 8px; flex-wrap: wrap;
-    background: var(--panel); border: 1px solid var(--border);
-    padding: 16px; border-radius: 10px; margin: 24px 0;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    padding: 20px; border-radius: 14px; margin: 28px 0 8px;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.6);
   }
+  .row-full { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
   input[type="text"] {
-    flex: 1 1 280px; padding: 10px 12px; border-radius: 8px;
-    border: 1px solid var(--border); background: #10121a; color: var(--text);
-    font-size: 0.95rem;
+    flex: 1 1 320px; padding: 13px 14px; border-radius: 9px;
+    border: 1px solid var(--border); background: #080b13; color: var(--text);
+    font-size: 0.95rem; font-family: var(--mono);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type="text"]:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
   }
   select {
-    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: #10121a; color: var(--text);
+    padding: 13px 12px; border-radius: 9px; border: 1px solid var(--border);
+    background: #080b13; color: var(--text); font-family: var(--sans); font-size: 0.9rem;
+    cursor: pointer;
   }
+  .select-group { display: flex; gap: 8px; }
+  .select-group label {
+    display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+  }
+
   button {
-    padding: 10px 18px; border-radius: 8px; border: none;
-    background: var(--accent); color: #0b0d12; font-weight: 600; cursor: pointer;
+    padding: 13px 22px; border-radius: 9px; border: 1px solid transparent;
+    font-weight: 600; cursor: pointer; font-family: var(--sans); font-size: 0.92rem;
+    transition: transform 0.1s, box-shadow 0.15s, opacity 0.15s;
   }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
-  #status { color: var(--muted); min-height: 1.2em; margin-bottom: 12px; }
-  #status.error { color: var(--error); }
+  button:active { transform: scale(0.98); }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #05070d;
+    box-shadow: 0 8px 24px -8px var(--accent-glow);
+  }
+  button.primary:hover { box-shadow: 0 8px 30px -6px var(--accent-glow); }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+  button.ghost {
+    background: transparent; color: var(--muted); border: 1px dashed var(--border-bright);
+  }
+  button.ghost:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* --- loader --- */
+  #loader {
+    display: none; margin: 18px 0; padding: 16px 18px; border-radius: 12px;
+    background: #080b13; border: 1px solid var(--border); font-family: var(--mono);
+    font-size: 0.85rem; color: var(--accent);
+  }
+  #loader.active { display: flex; align-items: center; gap: 14px; }
+  .spinner-ring {
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    border: 3px solid rgba(79, 214, 255, 0.2); border-top-color: var(--accent);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #loaderText::after {
+    content: "_"; animation: blink 1s step-start infinite; color: var(--accent);
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  #status { color: var(--muted); min-height: 1.2em; margin: 4px 0 12px; font-size: 0.9rem; }
+  #status.error { color: var(--error); font-family: var(--mono); }
+  #status.success { color: var(--success); }
+
   .result-panel {
-    background: var(--panel); border: 1px solid var(--border);
-    border-radius: 10px; padding: 20px 24px; margin-bottom: 20px;
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 14px; padding: 22px 26px; margin-bottom: 18px;
   }
-  .result-panel h2 { margin-top: 0; font-size: 1.1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 16px; }
-  #readmeOut { line-height: 1.55; }
-  #readmeOut pre { background: #10121a; padding: 12px; border-radius: 8px; overflow-x: auto; }
-  #readmeOut code { background: #10121a; padding: 2px 5px; border-radius: 4px; }
+  .result-panel h2 {
+    margin-top: 0; font-size: 0.8rem; color: var(--accent); text-transform: uppercase;
+    letter-spacing: 0.08em; font-family: var(--mono); font-weight: 600;
+  }
+  .meta {
+    font-size: 0.82rem; color: var(--muted); margin-bottom: 16px; font-family: var(--mono);
+    padding-bottom: 14px; border-bottom: 1px solid var(--border);
+  }
+  #readmeOut { line-height: 1.6; }
+  #readmeOut pre { background: #080b13; padding: 14px; border-radius: 9px; overflow-x: auto; border: 1px solid var(--border); }
+  #readmeOut code { background: #080b13; padding: 2px 6px; border-radius: 5px; font-family: var(--mono); font-size: 0.85em; }
+  #readmeOut img { max-width: 100%; }
   #diagramOut { text-align: center; overflow-x: auto; }
-  footer { color: var(--muted); font-size: 0.8rem; margin-top: 40px; text-align: center; }
-  a { color: var(--accent); }
+  #diagramOut svg { max-width: 100%; }
+
+  footer { color: var(--muted); font-size: 0.8rem; margin-top: 40px; text-align: center; font-family: var(--mono); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    form { grid-template-columns: 1fr; }
+    .row-full { flex-direction: column; }
+    p.sub { margin-left: 0; margin-top: 12px; }
+    header.hero { flex-direction: column; align-items: flex-start; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>DocWiright</h1>
-  <p class="sub">Vygeneruje README a one-screen architecture diagram pre verejný GitHub repozitár.</p>
+  <header class="hero">
+    <div class="glyph">&gt;_</div>
+    <h1>Doc<span class="accent">Wright</span></h1>
+  </header>
+  <p class="sub">// generuje README a one-screen architecture diagram pre verejný GitHub repozitár</p>
 
   <form id="genForm">
-    <input type="text" id="repoInput" placeholder="napr. sindresorhus/is-stream alebo https://github.com/owner/repo" required />
-    <select id="templateSelect">
-      <option value="">auto-detekcia</option>
-      <option value="library">library</option>
-      <option value="cli">cli</option>
-      <option value="app">app</option>
-      <option value="api">api</option>
-    </select>
-    <button type="submit" id="submitBtn">Generuj</button>
+    <div class="row-full">
+      <input type="text" id="repoInput" placeholder="napr. sindresorhus/is-stream alebo https://github.com/owner/repo" required />
+      <button type="button" class="ghost" id="tryBtn">Try: sindresorhus/is-stream</button>
+    </div>
+    <div class="select-group row-full">
+      <label>Šablóna
+        <select id="templateSelect">
+          <option value="">auto-detekcia</option>
+          <option value="library">library</option>
+          <option value="cli">cli</option>
+          <option value="app">app</option>
+          <option value="api">api</option>
+        </select>
+      </label>
+      <label>Jazyk výstupu
+        <select id="languageSelect">
+          <option value="sk">Slovenčina</option>
+          <option value="en">English</option>
+          <option value="cs">Čeština</option>
+          <option value="de">Deutsch</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+        </select>
+      </label>
+      <button type="submit" class="primary" id="submitBtn" style="margin-left:auto;">Generuj</button>
+    </div>
   </form>
 
   <div id="status"></div>
+  <div id="loader">
+    <div class="spinner-ring"></div>
+    <span id="loaderText">Inicializujem...</span>
+  </div>
 
   <div id="results" style="display:none;">
     <div class="result-panel">
-      <h2>Súhrn</h2>
+      <h2>// Súhrn</h2>
       <div class="meta" id="metaOut"></div>
       <div id="summaryOut"></div>
     </div>
     <div class="result-panel">
-      <h2>Architecture diagram</h2>
+      <h2>// Architecture diagram</h2>
       <div id="diagramOut"></div>
     </div>
     <div class="result-panel">
-      <h2>README</h2>
+      <h2>// README</h2>
       <div id="readmeOut"></div>
     </div>
   </div>
 
   <footer>
-    DocWiright beží na Node.js + GitHub MCP + Azure OpenAI (GPT-5.6 Terra). Zdrojový kód:
+    DocWright beží na Node.js + GitHub MCP + Azure OpenAI (GPT-5.6 Terra). Zdrojový kód:
     <a href="https://github.com/JaGajdos/docwright2" target="_blank" rel="noopener">docwright2</a>.
   </footer>
 </div>
@@ -113,11 +240,51 @@
   const statusEl = document.getElementById("status");
   const resultsEl = document.getElementById("results");
   const submitBtn = document.getElementById("submitBtn");
+  const tryBtn = document.getElementById("tryBtn");
+  const repoInput = document.getElementById("repoInput");
+  const loaderEl = document.getElementById("loader");
+  const loaderTextEl = document.getElementById("loaderText");
+
+  tryBtn.addEventListener("click", () => {
+    repoInput.value = "sindresorhus/is-stream";
+    repoInput.focus();
+  });
+
+  // "Zaujímavý loader" - cyklí cez sériu technicky ladených hlášok, kým bežia
+  // reálne backend volania (GitHub MCP ingestion + Azure OpenAI generovanie,
+  // typicky 10-90s). Nie je to len kozmetika - naznačuje, v ktorej fáze pipeline
+  // pravdepodobne je, aj keď backend priebežný progres nestreamuje.
+  const LOADER_MESSAGES = [
+    "Pripájam sa na GitHub MCP server...",
+    "Sťahujem strom repozitára...",
+    "Analyzujem manifesty a entry-pointy...",
+    "Detegujem typ projektu a stack...",
+    "Premýšľam nad architektúrou...",
+    "Generujem README cez Azure OpenAI...",
+    "Kreslím architecture diagram...",
+    "Validujem Mermaid syntax...",
+    "Skoro hotovo...",
+  ];
+  let loaderInterval;
+  function startLoader() {
+    let i = 0;
+    loaderTextEl.textContent = LOADER_MESSAGES[0];
+    loaderEl.classList.add("active");
+    loaderInterval = setInterval(() => {
+      i = (i + 1) % LOADER_MESSAGES.length;
+      loaderTextEl.textContent = LOADER_MESSAGES[i];
+    }, 2400);
+  }
+  function stopLoader() {
+    clearInterval(loaderInterval);
+    loaderEl.classList.remove("active");
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const repo = document.getElementById("repoInput").value.trim();
+    const repo = repoInput.value.trim();
     const template = document.getElementById("templateSelect").value;
+    const language = document.getElementById("languageSelect").value;
     if (!repo) return;
 
     if (API_BASE_URL.includes("REPLACE_WITH_YOUR_RAILWAY_URL")) {
@@ -129,13 +296,14 @@
     submitBtn.disabled = true;
     resultsEl.style.display = "none";
     statusEl.className = "";
-    statusEl.textContent = "Generujem... (zvyčajne 10-90 sekúnd, prvý request po dlhšej neaktivite môže trvať dlhšie kvôli cold-startu backendu)";
+    statusEl.textContent = "";
+    startLoader();
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repo, template: template || undefined }),
+        body: JSON.stringify({ repo, template: template || undefined, language }),
       });
       const data = await res.json();
 
@@ -145,6 +313,7 @@
         return;
       }
 
+      statusEl.className = "success";
       statusEl.textContent = "Hotovo.";
       document.getElementById("metaOut").textContent =
         `${data.repository} · šablóna: ${data.template} (${data.template_source}) · model: ${data.model_id}` +
@@ -162,6 +331,7 @@
       statusEl.className = "error";
       statusEl.textContent = `Sieťová chyba: ${err.message}. Skontroluj, či backend beží a API_BASE_URL je správna.`;
     } finally {
+      stopLoader();
       submitBtn.disabled = false;
     }
   });

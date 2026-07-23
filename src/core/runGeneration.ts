@@ -4,6 +4,7 @@ import { parseDocwrightConfig, resolveTemplateType, applyIgnoreList } from "../c
 import { selectTemplateType } from "../templates/selectTemplate.js";
 import { getTemplateByType } from "../templates/templates.js";
 import { generateDocumentation, type AzureOpenAiConfig } from "../generation/openaiClient.js";
+import { DEFAULT_OUTPUT_LANGUAGE, type OutputLanguage } from "../generation/promptBuilder.js";
 import type { GenerationResultShape } from "../generation/schema.js";
 import type { TemplateType } from "../templates/types.js";
 
@@ -31,6 +32,8 @@ export interface RunGenerationOptions {
   githubToken?: string;
   azureConfig: AzureOpenAiConfig;
   templateOverride?: TemplateType;
+  /** Vylepšenie 24.7.2026 (užívateľské rozhodnutie): jazyk vygenerovaného README/summary/diagramu. */
+  outputLanguage?: OutputLanguage;
 }
 
 export interface RunGenerationResult {
@@ -68,7 +71,12 @@ export async function runGeneration(repoInput: string, opts: RunGenerationOption
     const templateType = opts.templateOverride ?? resolveTemplateType(autoDetected, config);
     const template = getTemplateByType(templateType);
 
-    const outcome = await generateDocumentation(opts.azureConfig, context, template);
+    const outcome = await generateDocumentation(
+      opts.azureConfig,
+      context,
+      template,
+      opts.outputLanguage ?? DEFAULT_OUTPUT_LANGUAGE,
+    );
 
     return {
       owner,

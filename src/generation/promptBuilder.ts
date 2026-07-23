@@ -1,6 +1,26 @@
 import type { Template } from "../templates/types.js";
 import { TEMPLATE_EXAMPLES } from "../templates/examples.js";
 
+// Vylepšenie 24.7.2026 (užívateľské rozhodnutie): voliteľný jazyk výstupu namiesto
+// natvrdo Slovenčiny. Zámerne uzavretý zoznam (nie voľný text) - zabraňuje promptu
+// s ľubovoľným/nezmyselným jazykovým reťazcom a je to aj to, čo frontend select ponúka.
+export const SUPPORTED_OUTPUT_LANGUAGES = ["sk", "en", "cs", "de", "es", "fr"] as const;
+export type OutputLanguage = (typeof SUPPORTED_OUTPUT_LANGUAGES)[number];
+export const DEFAULT_OUTPUT_LANGUAGE: OutputLanguage = "sk";
+
+const LANGUAGE_NAMES: Record<OutputLanguage, string> = {
+  sk: "slovenčina",
+  en: "angličtina (English)",
+  cs: "čeština",
+  de: "nemčina (Deutsch)",
+  es: "španielčina (Español)",
+  fr: "francúzština (Français)",
+};
+
+export function isSupportedOutputLanguage(value: unknown): value is OutputLanguage {
+  return typeof value === "string" && (SUPPORTED_OUTPUT_LANGUAGES as readonly string[]).includes(value);
+}
+
 /** Kontext, ktorý Ingestion knižnica (T017-T019) pripraví pre jeden generation job. */
 export interface GenerationContext {
   owner: string;
@@ -23,7 +43,11 @@ export interface GenerationContext {
  * orezaný file tree, obsah manifestov, existujúci README, šablónové sekcie ako
  * záväzný kontrakt výstupu (žiadna sekcia sa nevypĺňa vymyslenou hodnotou - Article III).
  */
-export function buildGenerationPrompt(context: GenerationContext, template: Template) {
+export function buildGenerationPrompt(
+  context: GenerationContext,
+  template: Template,
+  outputLanguage: OutputLanguage = DEFAULT_OUTPUT_LANGUAGE,
+) {
   const sectionsSpec = template.sections
     .map((s) => {
       // Vylepšenie 24.7.2026: sekcia "badges" nikdy nesmie byť vyplnená hádaním modelu -
@@ -44,13 +68,16 @@ export function buildGenerationPrompt(context: GenerationContext, template: Temp
   // pre spracúvaný repozitár).
   const example = TEMPLATE_EXAMPLES[template.type];
 
+  const languageName = LANGUAGE_NAMES[outputLanguage];
+
   const system = [
-    "Si súčasť DocWiright - nástroja, ktorý generuje README a architektonický diagram pre GitHub repozitáre.",
+    "Si súčasť DocWright - nástroja, ktorý generuje README a architektonický diagram pre GitHub repozitáre.",
     "Musíš vrátiť presne tri polia: readme_markdown, architecture_diagram (Mermaid syntax, napr. 'flowchart TD'), summary.",
     "VŠETKY tri polia sú POVINNÉ a musia byť neprázdne reťazce v každej odpovedi - toto pravidlo sa vzťahuje na celé pole readme_markdown a na summary, nie na jednotlivé sekcie README (tie voliteľné sekcie môžeš vynechať, viď nižšie). summary je vždy 1-3 vety zhrňujúce repozitár, aj keď je README stručné - nikdy nesmie byť prázdny reťazec.",
+    `Celý textový výstup (readme_markdown, summary, aj popisky uzlov v architecture_diagram) napíš v jazyku: ${languageName}. Vlastné mená nemeň ani neprekladaj (názov repozitára/balíka, kód, príkazy, cesty k súborom, názvy funkcií/premenných, licenčné skratky ako MIT/Apache-2.0).`,
     "README skladaj presne z týchto sekcií, v tomto poradí. Nikdy nevypĺňaj sekciu vymyslenou hodnotou - ak dáta chýbajú, danú (voliteľnú) sekciu aj s nadpisom vynechaj, ale readme_markdown ako celok nesmie byť prázdny.",
     sectionsSpec,
-    `PRÍKLAD DOBRÉHO VÝSTUPU (len referencia štýlu/formátovania/tónu pre tento typ projektu - je o FIKTÍVNOM projekte, NEPOUŽÍVAJ jeho názov, popis ani žiadne fakty z neho, len napodobni formu):\n${example}`,
+    `PRÍKLAD DOBRÉHO VÝSTUPU (len referencia štýlu/formátovania/tónu pre tento typ projektu - je o FIKTÍVNOM projekte, NEPOUŽÍVAJ jeho názov, popis ani žiadne fakty z neho, len napodobni formu; príklad je po slovensky, ale výstup musí byť v jazyku uvedenom vyššie):\n${example}`,
   ].join("\n\n");
 
   const user = [

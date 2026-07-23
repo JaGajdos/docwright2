@@ -1,4 +1,4 @@
-# DocWiright
+# DocWright
 
 Vygeneruje README a one-screen architecture mapu pre verejný GitHub repozitár. MVP jadro podľa `tasks.md` (Phase 1-5, CLI-first).
 

@@ -1,7 +1,7 @@
 {
   "name": "docwright",
   "version": "0.1.0",
-  "description": "DocWiright - generates a README and one-screen architecture map for any public GitHub repo.",
+  "description": "DocWright - generates a README and one-screen architecture map for any public GitHub repo.",
   "private": true,
   "type": "module",
   "bin": {
