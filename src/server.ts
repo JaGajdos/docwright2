@@ -19,7 +19,9 @@ const HOST = "0.0.0.0";
 // neúmyselným/zlomyseľným zahltením reálneho (plateného) Azure OpenAI resource
 // na verejne dostupnom endpointe bez API kľúčov (Article IV/V - "lacno a rýchlo",
 // research.md #9). Reštart servera reset limitu - akceptované, je to len mäkká ochrana.
-const RATE_LIMIT_MAX_REQUESTS = 5;
+// Zvýšené z 5 na 20 (24.7.2026) - pôvodná hodnota bola príliš nízka aj na bežné
+// testovanie/demo cez frontend (jedna osoba ju vyčerpala v priebehu pár minút).
+const RATE_LIMIT_MAX_REQUESTS = 20;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hodina
 const rateLimitState = new Map<string, { count: number; resetAt: number }>();
 
