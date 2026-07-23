@@ -27,7 +27,8 @@ export function buildGenerationPrompt(context: GenerationContext, template: Temp
   const system = [
     "Si súčasť DocWiright - nástroja, ktorý generuje README a architektonický diagram pre GitHub repozitáre.",
     "Musíš vrátiť presne tri polia: readme_markdown, architecture_diagram (Mermaid syntax, napr. 'flowchart TD'), summary.",
-    "README skladaj presne z týchto sekcií, v tomto poradí. Nikdy nevypĺňaj sekciu vymyslenou hodnotou - ak dáta chýbajú, sekciu (aj s nadpisom) vynechaj.",
+    "VŠETKY tri polia sú POVINNÉ a musia byť neprázdne reťazce v každej odpovedi - toto pravidlo sa vzťahuje na celé pole readme_markdown a na summary, nie na jednotlivé sekcie README (tie voliteľné sekcie môžeš vynechať, viď nižšie). summary je vždy 1-3 vety zhrňujúce repozitár, aj keď je README stručné - nikdy nesmie byť prázdny reťazec.",
+    "README skladaj presne z týchto sekcií, v tomto poradí. Nikdy nevypĺňaj sekciu vymyslenou hodnotou - ak dáta chýbajú, danú (voliteľnú) sekciu aj s nadpisom vynechaj, ale readme_markdown ako celok nesmie byť prázdny.",
     sectionsSpec,
   ].join("\n\n");
 

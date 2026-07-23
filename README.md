@@ -9,7 +9,7 @@ Implementované a naostro odskúšané (bez credentials, kde to bolo možné):
 - `src/ingestion/` - reálny MCP klient nad `github-mcp-server` (stdio subprocess) + orchestrácia (file tree, manifesty, README, entry pointy)
 - `src/templates/` - 4 first-class šablóny (library/cli/app/api) + auto-detekcia typu
 - `src/config/` - `.docwright.json` parser (UC3)
-- `src/generation/` - OpenAI (GPT-5.6 Terra) structured output + reálna Mermaid validácia (jsdom, žiadny Chromium)
+- `src/generation/` - Azure OpenAI (GPT-5.6 Terra, Responses API) structured output + reálna Mermaid validácia (jsdom, žiadny Chromium)
 - `src/cli/generate.ts`, `bin/docwright.js` - `docwright generate <repo_url>`
 
 Návrhové dokumenty: `zadanie` (mimo tohto repa), `constitution.md`, `research.md`, `templates.md`, `tasks.md` - pozri projektovú dokumentáciu.
@@ -20,7 +20,10 @@ Návrhové dokumenty: `zadanie` (mimo tohto repa), `constitution.md`, `research.
 npm install
 cp .env.example .env
 # vyplň v .env:
-#   OPENAI_API_KEY=...
+#   AZURE_OPENAI_API_KEY=...
+#   AZURE_OPENAI_ENDPOINT=...          (napr. https://<resource>.openai.azure.com/)
+#   AZURE_OPENAI_API_VERSION=...       (napr. 2025-04-01-preview)
+#   AZURE_OPENAI_DEPLOYMENT=...        (názov nasadenia modelu, napr. T1-gpt-5.6-terra)
 #   GITHUB_PERSONAL_ACCESS_TOKEN=...   (read-only PAT, inak MCP server vyžaduje OAuth device-flow)
 ```
 
@@ -69,5 +72,5 @@ Výsledok: `vendor/github-mcp-server` (Linux/Mac) alebo `vendor/github-mcp-serve
 
 ## Ako získať kľúče do .env
 
-- `OPENAI_API_KEY` — [platform.openai.com/api-keys](https://platform.openai.com/api-keys), vytvor nový secret key.
+- `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_DEPLOYMENT` — z vášho Azure OpenAI resource (Azure Portal → daný resource → Keys and Endpoint; deployment name z "Deployments" v Azure AI Foundry).
 - `GITHUB_PERSONAL_ACCESS_TOKEN` — [github.com/settings/tokens](https://github.com/settings/tokens) → "Generate new token (classic)" → stačí bez zaškrtnutých scopes (len verejné repo čítanie) alebo scope `public_repo`. Bez tokenu server pri prvom volaní vypíše OAuth device-flow výzvu namiesto výsledku.

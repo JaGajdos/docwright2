@@ -6,7 +6,7 @@ import { ingestRepository } from "../ingestion/repository.js";
 import { parseDocwrightConfig, resolveTemplateType, applyIgnoreList } from "../config/docwrightConfig.js";
 import { selectTemplateType } from "../templates/selectTemplate.js";
 import { getTemplateByType } from "../templates/templates.js";
-import { generateDocumentation, GenerationError } from "../generation/openaiClient.js";
+import { generateDocumentation, loadAzureConfigFromEnv, GenerationError } from "../generation/openaiClient.js";
 
 // T025 (tasks.md) - `docwright generate <url>` prepája ingestion -> config -> template -> generation.
 // Article II (CLI mandate): web/API vrstva bude v budúcnosti len tenká obálka nad týmto istým kódom.
@@ -41,9 +41,11 @@ async function main() {
         const { owner, repo } = parseRepoUrl(repoUrlArg);
 
         const githubToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
-        const openaiKey = process.env.OPENAI_API_KEY;
-        if (!openaiKey) {
-          throw new Error("Chýba OPENAI_API_KEY v prostredí. Skopíruj .env.example do .env a vyplň ho.");
+        const azureConfig = loadAzureConfigFromEnv();
+        if (!azureConfig) {
+          throw new Error(
+            "Chýba Azure OpenAI konfigurácia (AZURE_OPENAI_API_KEY, AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_DEPLOYMENT). Skopíruj .env.example do .env a vyplň ho.",
+          );
         }
 
         client = new GithubMcpClient({ githubToken });
@@ -64,9 +66,9 @@ async function main() {
         const template = getTemplateByType(templateType);
 
         console.error(`Šablóna: ${templateType} (${opts.template ? "vynútené --template" : config.template ? "z .docwright.json" : "auto-detekcia"})`);
-        console.error("Generujem cez OpenAI...");
+        console.error(`Generujem cez Azure OpenAI (deployment: ${azureConfig.deployment})...`);
 
-        const outcome = await generateDocumentation(openaiKey, context, template);
+        const outcome = await generateDocumentation(azureConfig, context, template);
 
         if (opts.output) {
           await writeFile(opts.output, outcome.result.readme_markdown, "utf-8");
