@@ -1,6 +1,7 @@
 import { GithubMcpClient } from "./githubMcpClient.js";
 import type { RepoSignals } from "../templates/selectTemplate.js";
 import type { GenerationContext } from "../generation/promptBuilder.js";
+import { buildBadgesMarkdown } from "../generation/badges.js";
 
 const KEY_MANIFEST_NAMES = [
   "package.json",
@@ -82,6 +83,14 @@ export async function ingestRepository(
 
   const signals: RepoSignals = { filePaths, packageJson };
 
+  const badgesMarkdown = buildBadgesMarkdown({
+    owner,
+    repo,
+    filePaths,
+    packageJson,
+    hasLicenseFile: Boolean(licensePath),
+  });
+
   const context: GenerationContext = {
     owner,
     repo,
@@ -89,6 +98,7 @@ export async function ingestRepository(
     keyFileContents,
     existingReadme,
     detectedStack: detectStackFromManifests(manifestPaths, packageJson),
+    badgesMarkdown,
   };
 
   return { signals, context, docwrightConfigRaw };
@@ -123,12 +133,28 @@ function detectStackFromManifests(manifestPaths: string[], packageJson: RepoSign
 }
 
 /**
- * MCP nástroje vracajú výsledok ako { content: [{ type: "text", text: "..." }] }.
- * Táto funkcia je zámerne tolerantná k mierne odlišným tvarom (rôzne verzie SDK/servera).
+ * REÁLNA KRITICKÁ CHYBA nájdená 24.7.2026 (pri ladení badges funkcie, real-test):
+ * `get_file_contents` vracia content POLE S DVOMA položkami - `{type:"text", text:
+ * "successfully downloaded text file (SHA: ...)"}` (len status hláška, nie obsah!)
+ * A `{type:"resource", resource:{text: "<skutočný obsah súboru>"}}`. Pôvodná
+ * implementácia brala prvú "text" položku - teda VŽDY len tú status hlášku, nikdy
+ * reálny obsah súboru. Model teda odjakživa nedostával reálny obsah package.json/
+ * README/LICENSE/entry-pointov - fungovalo to len "náhodou" vierohodne pri známych
+ * verejných balíčkoch, ktoré model pozná z vlastného tréningu, nie z nášho kontextu
+ * (Article III - toto je presne to tiché zlyhanie, ktorému sa má zabrániť).
+ * Fix: uprednostniť "resource" položku (`resource.text`), "text" použiť len ako
+ * fallback pre nástroje, ktoré reálny obsah vracajú priamo ako text (napr.
+ * get_repository_tree, kde je JSON stromu priamo v content[0].text).
  */
 function extractTextFromToolResult(result: unknown): string | undefined {
-  const content = (result as { content?: Array<{ type?: string; text?: string }> })?.content;
+  const content = (result as {
+    content?: Array<{ type?: string; text?: string; resource?: { text?: string } }>;
+  })?.content;
   if (!Array.isArray(content)) return undefined;
+
+  const resourcePart = content.find((c) => c.type === "resource" && typeof c.resource?.text === "string");
+  if (resourcePart) return resourcePart.resource!.text;
+
   const textPart = content.find((c) => c.type === "text" && typeof c.text === "string");
   return textPart?.text;
 }

@@ -1,6 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { GithubMcpClient, GithubMcpClientError } from "../src/ingestion/githubMcpClient.js";
+import { ingestRepository } from "../src/ingestion/repository.js";
 
 // T010 (tasks.md) - fixture repozitáre: research.md sekcia 10.
 // Toto NIE JE mock - github-mcp-server je skutočná binárka, volania idú na skutočné GitHub API.
@@ -75,5 +76,26 @@ test(
     const result = await client.getFileContents("octocat", "Hello-World", "README");
     const text = JSON.stringify(result);
     assert.ok(text.toLowerCase().includes("hello world"), `obsah nesedí: ${text.slice(0, 300)}`);
+  },
+);
+
+test(
+  "REGRESIA (24.7.2026): ingestRepository musí čítať SKUTOČNÝ obsah súborov z 'resource' content položky, nie len MCP status hlášku z 'text' položky",
+  { skip: !HAS_TOKEN && "vyžaduje GITHUB_PERSONAL_ACCESS_TOKEN - pozri research.md #1" },
+  async () => {
+    // get_file_contents vracia content:[{type:"text", text:"successfully downloaded..."},
+    // {type:"resource", resource:{text:"<skutočný obsah>"}}] - pôvodná extractTextFromToolResult
+    // brala prvú "text" položku (len status hlášku), takže package.json/README/entry-pointy
+    // boli odjakživa prázdne/nezmyselné pre model. Tento test by na starom kóde zlyhal.
+    const { context } = await ingestRepository(client, "sindresorhus", "is-stream");
+    const pkg = context.keyFileContents["package.json"];
+    assert.ok(pkg, "package.json sa vôbec nenačítal");
+    assert.ok(
+      !pkg.toLowerCase().includes("successfully downloaded"),
+      `keyFileContents obsahuje MCP status hlášku namiesto reálneho obsahu súboru: ${pkg.slice(0, 200)}`,
+    );
+    const parsed = JSON.parse(pkg);
+    assert.equal(parsed.name, "is-stream");
+    assert.ok(context.existingReadme && !context.existingReadme.toLowerCase().includes("successfully downloaded"));
   },
 );
