@@ -110,7 +110,7 @@ export class GithubMcpClient {
         );
       }
       if (result.isError) {
-        throw mapToolErrorToDomainError(result);
+        throw mapToolErrorToDomainError(result as { content?: unknown });
       }
       return result;
     } catch (err) {
