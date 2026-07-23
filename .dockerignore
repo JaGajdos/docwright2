@@ -1,0 +1,12 @@
+node_modules
+node_modules_old_*
+dist
+.env
+.env.*
+!.env.example
+.git
+.git/trash
+vendor/github-mcp-server
+vendor/github-mcp-server.exe
+*.log
+README.generated.md

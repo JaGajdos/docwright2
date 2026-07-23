@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --import tsx --test tests/*.test.ts",
-    "generate": "node --import tsx src/cli/generate.ts"
+    "generate": "node --import tsx src/cli/generate.ts",
+    "start": "node --import tsx src/server.ts"
   },
   "engines": {
     "node": ">=20"

@@ -1,28 +1,14 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { writeFile } from "node:fs/promises";
-import { GithubMcpClient, GithubMcpClientError } from "../ingestion/githubMcpClient.js";
-import { ingestRepository } from "../ingestion/repository.js";
-import { parseDocwrightConfig, resolveTemplateType, applyIgnoreList } from "../config/docwrightConfig.js";
-import { selectTemplateType } from "../templates/selectTemplate.js";
-import { getTemplateByType } from "../templates/templates.js";
-import { generateDocumentation, loadAzureConfigFromEnv, GenerationError } from "../generation/openaiClient.js";
+import { GithubMcpClientError } from "../ingestion/githubMcpClient.js";
+import { loadAzureConfigFromEnv, GenerationError } from "../generation/openaiClient.js";
+import { runGeneration } from "../core/runGeneration.js";
+import type { TemplateType } from "../templates/types.js";
 
 // T025 (tasks.md) - `docwright generate <url>` prepája ingestion -> config -> template -> generation.
-// Article II (CLI mandate): web/API vrstva bude v budúcnosti len tenká obálka nad týmto istým kódom.
-
-interface ParsedRepoUrl {
-  owner: string;
-  repo: string;
-}
-
-function parseRepoUrl(input: string): ParsedRepoUrl {
-  const match = input.match(/github\.com\/([^/]+)\/([^/.]+)/) ?? input.match(/^([^/]+)\/([^/]+)$/);
-  if (!match) {
-    throw new Error(`Nerozpoznateľná GitHub URL/owner/repo: "${input}". Očakávam napr. https://github.com/owner/repo alebo owner/repo.`);
-  }
-  return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
-}
+// Article II (CLI mandate): web vrstva (src/server.ts, pridané pri verejnom nasadení
+// 23.7.2026) je tenká obálka nad tým istým src/core/runGeneration.ts jadrom.
 
 async function main() {
   const program = new Command();
@@ -36,11 +22,7 @@ async function main() {
     .action(async (repoUrlArg: string, opts: { json: boolean; output?: string; template?: string }) => {
       // Celé telo je v try/catch - Article III/V: každé zlyhanie musí byť čitateľné,
       // nikdy tiché ukončenie s exit 0 (bug nájdený a opravený pri smoke teste 23.7.2026).
-      let client: GithubMcpClient | undefined;
       try {
-        const { owner, repo } = parseRepoUrl(repoUrlArg);
-
-        const githubToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
         const azureConfig = loadAzureConfigFromEnv();
         if (!azureConfig) {
           throw new Error(
@@ -48,27 +30,18 @@ async function main() {
           );
         }
 
-        client = new GithubMcpClient({ githubToken });
-        await client.connect();
+        console.error(`Ingestujem ${repoUrlArg}...`);
+        const outcome = await runGeneration(repoUrlArg, {
+          githubToken: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
+          azureConfig,
+          templateOverride: opts.template as TemplateType | undefined,
+        });
 
-        console.error(`Ingestujem ${owner}/${repo}...`);
-        const { signals, context, docwrightConfigRaw } = await ingestRepository(client, owner, repo);
-
-        const { config, parseError } = parseDocwrightConfig(docwrightConfigRaw);
-        if (parseError) {
-          console.error(`Upozornenie: ${parseError} - ignorujem .docwright.json, pokračujem s auto-detekciou.`);
+        if (outcome.configParseWarning) {
+          console.error(`Upozornenie: ${outcome.configParseWarning} - ignorujem .docwright.json, pokračujem s auto-detekciou.`);
         }
-
-        context.fileTree = applyIgnoreList(context.fileTree, config);
-
-        const autoDetected = selectTemplateType(signals);
-        const templateType = (opts.template as ReturnType<typeof selectTemplateType>) ?? resolveTemplateType(autoDetected, config);
-        const template = getTemplateByType(templateType);
-
-        console.error(`Šablóna: ${templateType} (${opts.template ? "vynútené --template" : config.template ? "z .docwright.json" : "auto-detekcia"})`);
-        console.error(`Generujem cez Azure OpenAI (deployment: ${azureConfig.deployment})...`);
-
-        const outcome = await generateDocumentation(azureConfig, context, template);
+        console.error(`Šablóna: ${outcome.templateType} (${outcome.templateSource === "override" ? "vynútené --template" : outcome.templateSource === "config" ? "z .docwright.json" : "auto-detekcia"})`);
+        console.error(`Generujem cez Azure OpenAI (deployment: ${outcome.modelId})...`);
 
         if (opts.output) {
           await writeFile(opts.output, outcome.result.readme_markdown, "utf-8");
@@ -77,8 +50,8 @@ async function main() {
 
         if (opts.json) {
           console.log(JSON.stringify({
-            repository: `${owner}/${repo}`,
-            template: templateType,
+            repository: `${outcome.owner}/${outcome.repo}`,
+            template: outcome.templateType,
             model_id: outcome.modelId,
             mermaid_repaired: outcome.mermaidRepaired,
             ...outcome.result,
@@ -89,8 +62,6 @@ async function main() {
         }
       } catch (err) {
         handleFatalError(err);
-      } finally {
-        await client?.close();
       }
     });
 

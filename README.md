@@ -11,6 +11,8 @@ Implementované a naostro odskúšané (bez credentials, kde to bolo možné):
 - `src/config/` - `.docwright.json` parser (UC3)
 - `src/generation/` - Azure OpenAI (GPT-5.6 Terra, Responses API) structured output + reálna Mermaid validácia (jsdom, žiadny Chromium)
 - `src/cli/generate.ts`, `bin/docwright.js` - `docwright generate <repo_url>`
+- `src/server.ts` - minimálny verejný HTTP wrapper (`POST /api/generate`, `GET /health`), bez databázy/fronty
+- `docs/index.html` - statický frontend (formulár), určený na GitHub Pages
 
 Návrhové dokumenty: `zadanie` (mimo tohto repa), `constitution.md`, `research.md`, `templates.md`, `tasks.md` - pozri projektovú dokumentáciu.
 
@@ -74,3 +76,37 @@ Výsledok: `vendor/github-mcp-server` (Linux/Mac) alebo `vendor/github-mcp-serve
 
 - `AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_DEPLOYMENT` — z vášho Azure OpenAI resource (Azure Portal → daný resource → Keys and Endpoint; deployment name z "Deployments" v Azure AI Foundry).
 - `GITHUB_PERSONAL_ACCESS_TOKEN` — [github.com/settings/tokens](https://github.com/settings/tokens) → "Generate new token (classic)" → stačí bez zaškrtnutých scopes (len verejné repo čítanie) alebo scope `public_repo`. Bez tokenu server pri prvom volaní vypíše OAuth device-flow výzvu namiesto výsledku.
+
+## Verejné nasadenie (Railway + GitHub Pages)
+
+Rozhodnutie 23.7.2026: bez databázy/fronty (Article VII) - `src/server.ts` je synchrónny
+request/response wrapper nad tým istým jadrom ako CLI (`src/core/runGeneration.ts`).
+Backend beží na Railway (Dockerfile v roote), frontend je statický `docs/index.html`
+na GitHub Pages.
+
+### Backend na Railway
+
+1. [railway.app](https://railway.app) → New Project → Deploy from GitHub repo → vyber `docwright2`. Railway rozpozná `Dockerfile` v roote automaticky.
+2. V Service → Variables nastav (rovnaké mená ako v `.env`):
+   - `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_VERSION`, `AZURE_OPENAI_DEPLOYMENT`
+   - `GITHUB_PERSONAL_ACCESS_TOKEN`
+   - (Railway nastavuje `PORT` sám - `src/server.ts` ho číta automaticky, netreba ho pridávať ručne.)
+3. Service → Settings → Networking → Public Networking → "Generate Domain" - dostaneš verejnú URL (napr. `https://docwright2-production.up.railway.app`).
+4. Over: `curl https://<tvoja-railway-url>/health` → `{"status":"ok"}`.
+
+**Poznámka k cene:** Railway nemá trvalý free tier (len jednorazový $5 kredit na 30 dní, potom Hobby plan $5/mesiac) - vedomé rozhodnutie, keďže už máš účet.
+
+### Frontend na GitHub Pages
+
+1. V `docs/index.html` nahraď `API_BASE_URL` skutočnou Railway URL z kroku 3 vyššie.
+2. Commitni a pushni zmenu.
+3. Na GitHube: repo → Settings → Pages → Source: "Deploy from a branch" → Branch: `master`, priečinok `/docs` → Save.
+   - **Ak je `docwright2` súkromný repozitár:** GitHub Pages pre private repo vyžaduje GitHub Pro/Team/Enterprise plán. Ak ho nemáš, buď repo dočasne zverejni, alebo frontend nasaď z osobitného verejného repozitára (obsahuje len statický HTML, žiadnu logiku ani kľúče).
+4. Po pár minútach beží na `https://<tvoj-github-username>.github.io/docwright2/`.
+
+### Ochrana pred zneužitím
+
+Endpoint je verejný a bez API kľúčov (vedomé zjednodušenie - žiadna databáza v tejto fáze),
+preto má `src/server.ts` jednoduchý in-memory rate limit: max 5 requestov/hodinu na IP adresu.
+Reštart backendu limit vynuluje - je to len mäkká ochrana proti neúmyselnému zahlteniu
+reálneho (plateného) Azure OpenAI resource, nie plnohodnotná auth vrstva.
